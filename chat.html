@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alee.AI Chat — YouTube Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=Clash+Display:wght@600;700&family=Bricolage+Grotesque:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#060608;--surface:#0e0e14;--card:#13131c;--card2:#1a1a24;--border:rgba(255,255,255,0.07);--accent:#FF3B5C;--accent2:#FF8C42;--text:#F0F0F5;--muted:rgba(240,240,245,0.45);}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:'Bricolage Grotesque',sans-serif;display:flex;flex-direction:column;}
+
+/* SIDEBAR */
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:50;transition:transform 0.3s;}
+.sidebar-logo{padding:20px;border-bottom:1px solid var(--border);}
+.logo-text{font-family:'Clash Display',sans-serif;font-size:20px;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.logo-sub{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+.new-chat-btn{margin:16px;padding:12px 16px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:12px;color:#fff;font-family:'Bricolage Grotesque',sans-serif;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:10px;transition:all 0.2s;box-shadow:0 4px 20px rgba(255,59,92,0.3);}
+.new-chat-btn:hover{transform:translateY(-1px);box-shadow:0 6px 25px rgba(255,59,92,0.4);}
+.sidebar-section{padding:8px 16px;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);}
+.chat-history{flex:1;overflow-y:auto;padding:0 8px;}
+.chat-history::-webkit-scrollbar{width:4px;}
+.chat-history::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.history-item{padding:10px 12px;border-radius:10px;cursor:pointer;font-size:13px;color:var(--muted);transition:all 0.2s;display:flex;align-items:center;gap:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.history-item:hover{background:rgba(255,255,255,0.05);color:var(--text);}
+.history-item.active{background:rgba(255,59,92,0.1);color:var(--accent);}
+.sidebar-bottom{padding:16px;border-top:1px solid var(--border);}
+.back-btn{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;cursor:pointer;padding:8px;border-radius:8px;transition:all 0.2s;text-decoration:none;}
+.back-btn:hover{background:rgba(255,255,255,0.05);color:var(--text);}
+
+/* MAIN CHAT */
+.main{margin-left:260px;height:100vh;display:flex;flex-direction:column;}
+.chat-header{padding:16px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:rgba(6,6,8,0.8);backdrop-filter:blur(20px);}
+.chat-title{font-family:'Clash Display',sans-serif;font-size:16px;font-weight:600;}
+.chat-subtitle{font-size:12px;color:var(--muted);}
+.header-actions{display:flex;gap:8px;}
+.header-btn{padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;cursor:pointer;transition:all 0.2s;font-family:'Bricolage Grotesque',sans-serif;}
+.header-btn:hover{background:rgba(255,255,255,0.05);color:var(--text);}
+
+/* MESSAGES */
+.messages-container{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:24px;}
+.messages-container::-webkit-scrollbar{width:6px;}
+.messages-container::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+
+/* Welcome screen */
+.welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;padding:40px;}
+.welcome-icon{font-size:56px;margin-bottom:20px;}
+.welcome h2{font-family:'Clash Display',sans-serif;font-size:28px;margin-bottom:10px;}
+.welcome p{color:var(--muted);font-size:16px;max-width:400px;line-height:1.6;margin-bottom:32px;}
+.suggestion-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:560px;width:100%;}
+.suggestion-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;cursor:pointer;text-align:left;transition:all 0.2s;}
+.suggestion-card:hover{border-color:rgba(255,59,92,0.3);background:rgba(255,59,92,0.05);transform:translateY(-2px);}
+.sug-icon{font-size:20px;margin-bottom:8px;}
+.sug-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;}
+.sug-desc{font-size:12px;color:var(--muted);}
+
+/* Message bubbles */
+.message{display:flex;gap:14px;align-items:flex-start;animation:msgIn 0.3s ease;}
+@keyframes msgIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.message.user{flex-direction:row-reverse;}
+.msg-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.bot-av{background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 0 20px rgba(255,59,92,0.3);}
+.user-av{background:linear-gradient(135deg,#4B9FFF,#784BA0);}
+.msg-content{max-width:75%;}
+.msg-name{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;}
+.message.user .msg-name{text-align:right;}
+.msg-bubble{padding:14px 18px;border-radius:18px;font-size:15px;line-height:1.7;color:var(--text);}
+.bot-bubble{background:var(--card);border:1px solid var(--border);border-radius:4px 18px 18px 18px;}
+.user-bubble{background:linear-gradient(135deg,rgba(255,59,92,0.2),rgba(255,140,66,0.15));border:1px solid rgba(255,59,92,0.2);border-radius:18px 4px 18px 18px;}
+.msg-bubble ul{padding-left:20px;margin-top:8px;}
+.msg-bubble li{margin-bottom:6px;}
+.msg-bubble strong{color:#fff;}
+.msg-actions{display:flex;gap:8px;margin-top:8px;}
+.msg-action-btn{background:none;border:1px solid var(--border);color:var(--muted);font-size:12px;padding:4px 10px;border-radius:6px;cursor:pointer;transition:all 0.2s;font-family:'Bricolage Grotesque',sans-serif;}
+.msg-action-btn:hover{background:rgba(255,255,255,0.05);color:var(--text);}
+
+/* Typing */
+.typing-dots{display:flex;gap:5px;padding:4px 0;align-items:center;}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:bounce 1.2s ease infinite;}
+.dot:nth-child(2){animation-delay:0.2s;background:var(--accent2);}
+.dot:nth-child(3){animation-delay:0.4s;background:#FFD166;}
+@keyframes bounce{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-8px);}}
+
+/* INPUT BAR */
+.input-section{padding:16px 24px 24px;background:var(--bg);}
+.input-wrap{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;transition:border-color 0.2s;box-shadow:0 0 40px rgba(255,59,92,0.05);}
+.input-wrap:focus-within{border-color:rgba(255,59,92,0.3);}
+.input-row{display:flex;gap:10px;align-items:flex-end;}
+textarea{flex:1;background:none;border:none;outline:none;color:var(--text);font-family:'Bricolage Grotesque',sans-serif;font-size:15px;resize:none;max-height:120px;line-height:1.6;caret-color:var(--accent);}
+textarea::placeholder{color:rgba(255,255,255,0.25);}
+.send-btn{width:40px;height:40px;border-radius:12px;border:none;cursor:pointer;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;transition:all 0.2s;flex-shrink:0;box-shadow:0 4px 15px rgba(255,59,92,0.3);}
+.send-btn:hover{transform:scale(1.05);}
+.send-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+.send-btn svg{width:18px;height:18px;fill:white;}
+.quick-chips{display:flex;gap:8px;flex-wrap:wrap;}
+.qchip{padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;font-weight:500;cursor:pointer;transition:all 0.2s;font-family:'Bricolage Grotesque',sans-serif;white-space:nowrap;}
+.qchip:hover{border-color:rgba(255,59,92,0.4);color:var(--accent);background:rgba(255,59,92,0.05);}
+.input-footer{font-size:11px;color:rgba(255,255,255,0.2);text-align:center;}
+
+/* Mobile */
+.mobile-header{display:none;padding:14px 16px;background:var(--surface);border-bottom:1px solid var(--border);align-items:center;gap:12px;}
+.mobile-menu-btn{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;}
+
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0);}
+  .main{margin-left:0;}
+  .mobile-header{display:flex;}
+  .suggestion-grid{grid-template-columns:1fr;}
+  .msg-content{max-width:90%;}
+}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-text">Alee.AI</div>
+    <div class="logo-sub">YouTube Assistant</div>
+  </div>
+  <button class="new-chat-btn" onclick="newChat()">
+    ✏️ New Chat
+  </button>
+  <div class="sidebar-section">Recent Chats</div>
+  <div class="chat-history" id="chatHistory">
+    <div class="history-item active">💬 New conversation</div>
+  </div>
+  <div class="sidebar-bottom">
+    <a href="index.html" class="back-btn">← Back to Home</a>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <!-- Mobile Header -->
+  <div class="mobile-header">
+    <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+    <div style="font-family:'Clash Display',sans-serif;font-size:16px;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Alee.AI</div>
+    <button class="header-btn" onclick="newChat()" style="margin-left:auto;">New Chat</button>
+  </div>
+
+  <!-- Chat Header -->
+  <div class="chat-header">
+    <div>
+      <div class="chat-title">YouTube AI Assistant</div>
+      <div class="chat-subtitle">by QaimKhani &mdash; Ask anything about YouTube growth</div>
+    </div>
+    <div class="header-actions">
+      <button class="header-btn" onclick="newChat()">🗑 Clear</button>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  <div class="messages-container" id="messagesContainer">
+    <!-- Welcome shown initially -->
+    <div class="welcome" id="welcomeScreen">
+      <div class="welcome-icon">🎬</div>
+      <h2>How can I help you grow?</h2>
+      <p>Ask me anything about YouTube — ideas, scripts, titles, strategy, monetization and more!</p>
+      <div class="suggestion-grid">
+        <div class="suggestion-card" onclick="askSuggestion('Give me 5 viral YouTube video ideas for finance niche')">
+          <div class="sug-icon">💡</div>
+          <div class="sug-title">Video Ideas</div>
+          <div class="sug-desc">Get viral ideas for any niche</div>
+        </div>
+        <div class="suggestion-card" onclick="askSuggestion('Write a catchy YouTube title for a video about making money online in Pakistan')">
+          <div class="sug-icon">🎯</div>
+          <div class="sug-title">Viral Titles</div>
+          <div class="sug-desc">Click-worthy title suggestions</div>
+        </div>
+        <div class="suggestion-card" onclick="askSuggestion('Write a full YouTube video script about how to invest in Pakistan stock market for beginners')">
+          <div class="sug-icon">📝</div>
+          <div class="sug-title">Script Writer</div>
+          <div class="sug-desc">Full video scripts in minutes</div>
+        </div>
+        <div class="suggestion-card" onclick="askSuggestion('How can I grow my YouTube channel fast from 0 subscribers?')">
+          <div class="sug-icon">🚀</div>
+          <div class="sug-title">Growth Strategy</div>
+          <div class="sug-desc">Tips to grow faster on YouTube</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Input -->
+  <div class="input-section">
+    <div class="input-wrap">
+      <div class="quick-chips">
+        <button class="qchip" onclick="quickMsg('Give me viral video ideas for gaming niche')">💡 Ideas</button>
+        <button class="qchip" onclick="quickMsg('Write a catchy title for my video')">🎯 Titles</button>
+        <button class="qchip" onclick="quickMsg('Write a script for my next video')">📝 Script</button>
+        <button class="qchip" onclick="quickMsg('How to get more views on YouTube?')">👁 Views</button>
+        <button class="qchip" onclick="quickMsg('How to monetize my YouTube channel?')">💰 Monetize</button>
+      </div>
+      <div class="input-row">
+        <textarea id="userInput" placeholder="Ask anything about YouTube growth..." rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+          <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+        </button>
+      </div>
+      <div class="input-footer">Alee.AI by QaimKhani &mdash; Free YouTube Growth Assistant</div>
+    </div>
+  </div>
+</div>
+
+<script>
+var API_KEY = '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';
+var messages = [];
+var chatCount = 1;
+
+var SYSTEM = `You are Alee.AI, an expert YouTube growth assistant created by QaimKhani from Pakistan. 
+You help creators grow their YouTube channels with viral ideas, titles, scripts, SEO strategies, and monetization tips.
+Be friendly, energetic, and practical. Use emojis naturally. Give specific, actionable advice.
+Format your responses clearly with bullet points or numbered lists when needed.
+Always sign off responses with helpful follow-up suggestions.`;
+
+function autoResize(el){
+  el.style.height='auto';
+  el.style.height=Math.min(el.scrollHeight,120)+'px';
+}
+
+function handleKey(e){
+  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendMessage(); }
+}
+
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+function newChat(){
+  messages = [];
+  var container = document.getElementById('messagesContainer');
+  container.innerHTML = '';
+  var welcome = document.createElement('div');
+  welcome.className = 'welcome';
+  welcome.id = 'welcomeScreen';
+  welcome.innerHTML = `
+    <div class="welcome-icon">🎬</div>
+    <h2>How can I help you grow?</h2>
+    <p>Ask me anything about YouTube — ideas, scripts, titles, strategy, monetization and more!</p>
+    <div class="suggestion-grid">
+      <div class="suggestion-card" onclick="askSuggestion('Give me 5 viral YouTube video ideas for finance niche')"><div class="sug-icon">💡</div><div class="sug-title">Video Ideas</div><div class="sug-desc">Get viral ideas for any niche</div></div>
+      <div class="suggestion-card" onclick="askSuggestion('Write a catchy YouTube title for a video about making money online in Pakistan')"><div class="sug-icon">🎯</div><div class="sug-title">Viral Titles</div><div class="sug-desc">Click-worthy title suggestions</div></div>
+      <div class="suggestion-card" onclick="askSuggestion('Write a full YouTube video script about how to invest in Pakistan stock market for beginners')"><div class="sug-icon">📝</div><div class="sug-title">Script Writer</div><div class="sug-desc">Full video scripts in minutes</div></div>
+      <div class="suggestion-card" onclick="askSuggestion('How can I grow my YouTube channel fast from 0 subscribers?')"><div class="sug-icon">🚀</div><div class="sug-title">Growth Strategy</div><div class="sug-desc">Tips to grow faster on YouTube</div></div>
+    </div>`;
+  container.appendChild(welcome);
+  document.getElementById('userInput').value = '';
+  addToHistory('New conversation');
+}
+
+function addToHistory(title){
+  var history = document.getElementById('chatHistory');
+  var items = history.querySelectorAll('.history-item');
+  items.forEach(function(i){ i.classList.remove('active'); });
+  var item = document.createElement('div');
+  item.className = 'history-item active';
+  item.textContent = '💬 ' + title.substring(0,30) + (title.length>30?'...':'');
+  history.insertBefore(item, history.firstChild);
+}
+
+function quickMsg(text){
+  document.getElementById('userInput').value = text;
+  sendMessage();
+}
+
+function askSuggestion(text){
+  document.getElementById('userInput').value = text;
+  sendMessage();
+}
+
+function removeWelcome(){
+  var w = document.getElementById('welcomeScreen');
+  if(w) w.remove();
+}
+
+function addMessage(role, text){
+  removeWelcome();
+  var container = document.getElementById('messagesContainer');
+  var div = document.createElement('div');
+  div.className = 'message ' + role;
+  var isBot = role === 'bot';
+  var formattedText = text
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\n\n/g,'<br><br>')
+    .replace(/\n- /g,'<br>• ')
+    .replace(/\n\d+\. /g, function(m){ return '<br>' + m.trim() + ' '; })
+    .replace(/\n/g,'<br>');
+
+  div.innerHTML = `
+    <div class="msg-avatar ${isBot?'bot-av':'user-av'}">${isBot?'🤖':'👤'}</div>
+    <div class="msg-content">
+      <div class="msg-name">${isBot?'Alee.AI by QaimKhani':'You'}</div>
+      <div class="msg-bubble ${isBot?'bot-bubble':'user-bubble'}">${formattedText}</div>
+      ${isBot?`<div class="msg-actions"><button class="msg-action-btn" onclick="copyText(this)">📋 Copy</button></div>`:''}
+    </div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function copyText(btn){
+  var bubble = btn.closest('.msg-content').querySelector('.msg-bubble');
+  navigator.clipboard.writeText(bubble.innerText);
+  btn.textContent = '✅ Copied!';
+  setTimeout(function(){ btn.textContent = '📋 Copy'; }, 2000);
+}
+
+function addTyping(){
+  var container = document.getElementById('messagesContainer');
+  var div = document.createElement('div');
+  div.className = 'message bot';
+  div.id = 'typingMsg';
+  div.innerHTML = `
+    <div class="msg-avatar bot-av">🤖</div>
+    <div class="msg-content">
+      <div class="msg-name">Alee.AI by QaimKhani</div>
+      <div class="msg-bubble bot-bubble"><div class="typing-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
+    </div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function removeTyping(){
+  var t = document.getElementById('typingMsg');
+  if(t) t.remove();
+}
+
+async function sendMessage(){
+  var input = document.getElementById('userInput');
+  var text = input.value.trim();
+  if(!text) return;
+  var btn = document.getElementById('sendBtn');
+
+  input.value = '';
+  input.style.height = 'auto';
+  btn.disabled = true;
+
+  addMessage('user', text);
+  if(messages.length === 0) addToHistory(text);
+
+  messages.push({role:'user', content:text});
+  addTyping();
+
+  try{
+    var resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key': API_KEY,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1500,
+        system: SYSTEM,
+        messages: messages
+      })
+    });
+
+    var data = await resp.json();
+    if(data.error) throw new Error(data.error.message);
+    var reply = data.content.map(function(c){ return c.text||''; }).join('');
+    removeTyping();
+    addMessage('bot', reply);
+    messages.push({role:'assistant', content:reply});
+
+  }catch(e){
+    removeTyping();
+    addMessage('bot', '⚠️ Error: ' + e.message + ' — Please try again!');
+  }
+
+  btn.disabled = false;
+  input.focus();
+}
+
+document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+</script>
+</body>
+</html>
